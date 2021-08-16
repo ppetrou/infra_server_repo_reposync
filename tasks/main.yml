@@ -1,0 +1,38 @@
+---
+# tasks file for infra_server_repo_reposync
+
+- name: setup http server to host repos
+  ansible.builtin.dnf:
+    name: httpd
+    state: present
+
+- name: install yum utils
+  ansible.builtin.dnf:
+    name: yum-utils
+    state: present
+
+- name: enable and start httpd service
+  ansible.builtin.systemd:
+    name: httpd
+    state: started
+    enabled: yes
+
+- name: check if firewalld is running
+  ansible.builtin.systemd:
+    name: firewalld
+    state: started
+  register: firewalld_running
+  check_mode: true
+
+- name: configure firewall for httpd access
+  ansible.posix.firewalld:
+    service: http
+    permanent: yes
+    immediate: yes
+    state: enabled
+  when: not firewalld_running.changed
+
+- name: mirror repo
+  ansible.builtin.command: reposync -p /var/www/html --download-metadata --repo={{ item }}
+  loop: "{{ repolist }}"
+

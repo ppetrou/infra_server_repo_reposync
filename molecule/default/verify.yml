@@ -1,0 +1,43 @@
+---
+# This is an example playbook to execute Ansible tests.
+
+- name: Verify
+  hosts: repo_sync_server
+  gather_facts: false
+  tasks:
+    - name: install net-tools
+      ansible.builtin.dnf:
+        name: [net-tools]
+        state: present
+   
+    - name: check that httpd is running
+      ansible.builtin.systemd:
+        name: httpd
+        state: started
+      register: httpd_running
+      check_mode: true
+
+    - name: assert httpd is running
+      ansible.builtin.assert:
+        that:
+          - not httpd_running.changed
+    
+    - name: check if port 80 is listening
+      ansible.builtin.shell: netstat -tnl | grep 80
+      register: netstat_output
+      failed_when: "netstat_output.stdout_lines|length != 1"
+    
+    - name: stat the local repo dir
+      ansible.builtin.stat:
+        path: /var/www/html/extras
+      register: local_repo
+    
+    - name: assert the local repo dir is present
+      ansible.builtin.assert:
+        that:
+          - local_repo.stat.exists
+    
+    - name: test repo url
+      uri:
+        url: http://localhost:80/extras
+        status_code: 200

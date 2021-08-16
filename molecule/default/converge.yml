@@ -1,0 +1,11 @@
+---
+- name: Converge
+  hosts: repo_sync_server
+  tasks:
+
+    - name: "Include infra_server_repo_reposync"
+      include_role:
+        name: "infra_server_repo_reposync"
+      vars:
+        repolist:
+          - extras
